@@ -1,5 +1,7 @@
 # Visual Dominance Analyzer
 
+> **See who commands the room** — AI-powered visual dominance analysis in seconds
+
 **HackIllinois 2026 Project** | [Live Demo](https://hack-illinois-2026.vercel.app)
 
 An AI-powered web application that analyzes images to determine visual dominance using advanced computer vision and machine learning. Upload an image or capture one with your webcam, and get instant insights into spatial presence, posture, facial intensity, and attention capture.
