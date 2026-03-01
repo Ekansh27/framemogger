@@ -58,25 +58,30 @@ export function SignalBreakdown({ entries }: SignalBreakdownProps) {
   ];
 
   return (
-    <div className="card p-5">
-      <p className="text-gray-400 text-xs font-medium uppercase tracking-widest mb-4">
-        Signal Breakdown
-      </p>
-      <ResponsiveContainer width="100%" height={280}>
-        <RadarChart data={data} cx="50%" cy="50%" outerRadius="72%">
-          <PolarGrid stroke="#E5E7EB" />
+    <div className="rounded-2xl border border-zinc-800/80 bg-zinc-900/70 backdrop-blur-xl shadow-[0_20px_56px_-28px_rgba(0,0,0,0.9)] p-6 sm:p-7">
+      <div className="mb-4">
+        <p className="text-zinc-100 text-lg font-semibold tracking-tight">Signal Profile</p>
+        <p className="text-zinc-400 text-sm mt-1.5 leading-relaxed">
+          Four dimensions of frame dominance: spatial presence, posture, facial intensity, and attention capture.
+        </p>
+      </div>
+
+      <div className="rounded-2xl border border-zinc-700/80 bg-zinc-950/65 p-3 sm:p-4">
+      <ResponsiveContainer width="100%" height={300}>
+        <RadarChart data={data} cx="50%" cy="52%" outerRadius="68%" margin={{ top: 12, right: 24, left: 24, bottom: 8 }}>
+          <PolarGrid stroke="#3F3F46" />
           <PolarAngleAxis
             dataKey="axis"
-            tick={{ fill: "#9CA3AF", fontSize: 11, fontWeight: 500 }}
+            tick={{ fill: "#D4D4D8", fontSize: 12, fontWeight: 600 }}
           />
           <Tooltip
             contentStyle={{
-              background: "#FFFFFF",
-              border: "1px solid #E5E7EB",
-              borderRadius: 8,
-              color: "#111111",
-              fontSize: 11,
-              boxShadow: "0 4px 6px -1px rgba(0,0,0,0.1)",
+              background: "#09090B",
+              border: "1px solid #3F3F46",
+              borderRadius: 12,
+              color: "#F4F4F5",
+              fontSize: 12,
+              boxShadow: "0 12px 24px -16px rgba(0,0,0,0.25)",
             }}
           />
           {entries.map((entry, i) => (
@@ -86,17 +91,33 @@ export function SignalBreakdown({ entries }: SignalBreakdownProps) {
               dataKey={`p${i}`}
               stroke={RADAR_COLORS[i % RADAR_COLORS.length]}
               fill={RADAR_COLORS[i % RADAR_COLORS.length]}
-              fillOpacity={0.15}
-              strokeWidth={1.5}
+              fillOpacity={0.12}
+              strokeWidth={2}
               animationBegin={i * 200}
-              animationDuration={800}
+              animationDuration={700}
             />
           ))}
           <Legend
-            wrapperStyle={{ fontSize: 11, color: "#6B7280", paddingTop: 8 }}
+            wrapperStyle={{ fontSize: 12, color: "#A1A1AA", paddingTop: 10 }}
           />
         </RadarChart>
       </ResponsiveContainer>
+      </div>
+
+      <div className="mt-4 flex flex-wrap gap-2">
+        {entries.map((entry, i) => (
+          <span
+            key={`${entry.name}-${i}`}
+            className="inline-flex items-center gap-2 px-2.5 py-1 rounded-full bg-zinc-900 border border-zinc-700 text-xs text-zinc-300"
+          >
+            <span
+              className="w-2 h-2 rounded-full"
+              style={{ backgroundColor: RADAR_COLORS[i % RADAR_COLORS.length] }}
+            />
+            {entry.name}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }

@@ -117,6 +117,12 @@ h4 { font-size: 0.9375rem; font-weight: 600; }
   100% { text-shadow: 0 0 0 rgba(37,99,235,0); }
 }
 
+@keyframes mog-text-shimmer {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
 .animate-shimmer {
   animation: shimmer 2s infinite;
 }
@@ -137,6 +143,11 @@ h4 { font-size: 0.9375rem; font-weight: 600; }
   animation: pulse-glow 3.5s ease-in-out infinite;
 }
 
+.mog-title-shimmer {
+  background-size: 220% 220%;
+  animation: mog-text-shimmer 5s ease-in-out infinite;
+}
+
 @layer utilities {
   .scrollbar-hide {
     -ms-overflow-style: none;
@@ -144,5 +155,15 @@ h4 { font-size: 0.9375rem; font-weight: 600; }
   }
   .scrollbar-hide::-webkit-scrollbar {
     display: none;
+  }
+}
+/* ─── Accessibility: Reduced Motion ─────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

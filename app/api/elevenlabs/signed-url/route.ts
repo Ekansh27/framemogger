@@ -12,6 +12,7 @@ export async function GET(req: NextRequest) {
     }
 
     const agentId = req.nextUrl.searchParams.get("agentId") || process.env.ELEVENLABS_AGENT_ID || DEFAULT_AGENT_ID;
+    console.log("[SignedURL] Requesting signed URL for agent:", agentId);
 
     const response = await fetch(
       `https://api.elevenlabs.io/v1/convai/conversation/get-signed-url?agent_id=${encodeURIComponent(agentId)}`,
@@ -24,21 +25,36 @@ export async function GET(req: NextRequest) {
       }
     );
 
+    console.log("[SignedURL] ElevenLabs API response status:", response.status);
+
     if (!response.ok) {
       const details = await response.text();
+      console.error("[SignedURL] Failed to fetch signed URL:", details);
       return NextResponse.json(
-        { error: "Failed to fetch signed URL", details },
+        { 
+          error: "Failed to fetch signed URL from ElevenLabs", 
+          status: response.status,
+          details 
+        },
         { status: response.status }
       );
     }
 
     const body = await response.json();
+    console.log("[SignedURL] Response has fields:", Object.keys(body));
+    
     if (!body?.signed_url) {
-      return NextResponse.json({ error: "signed_url missing in response" }, { status: 500 });
+      console.error("[SignedURL] Signed URL missing in response:", body);
+      return NextResponse.json({ 
+        error: "signed_url missing in response", 
+        response: body 
+      }, { status: 500 });
     }
 
+    console.log("[SignedURL] Successfully created signed URL");
     return NextResponse.json({ signedUrl: body.signed_url, agentId });
   } catch (error) {
+    console.error("[SignedURL] Unexpected error:", error);
     return NextResponse.json(
       { error: "Unexpected error creating signed URL", details: String(error) },
       { status: 500 }

@@ -1,0 +1,116 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import type { Face } from "@/types/analysis";
+
+const DETECT_PHASES = [
+  "Scanning for faces…",
+  "Mapping facial boundaries…",
+  "Extracting face crops…",
+  "Preparing analysis…",
+];
+
+const ANALYZE_PHASES = [
+  "Mapping spatial boundaries…",
+  "Analyzing posture vectors…",
+  "Calculating facial intensity…",
+  "Computing attention capture…",
+  "Determining frame dominance…",
+];
+
+interface LoadingOverlayProps {
+  preview: string | null;
+  mode: "detecting" | "analyzing";
+  faces?: Face[]; // Optional: pass detected faces for cinematic overlay
+}
+
+export function LoadingOverlay({ preview, mode, faces = [] }: LoadingOverlayProps) {
+  const phases = mode === "detecting" ? DETECT_PHASES : ANALYZE_PHASES;
+  const [phase, setPhase] = useState(0);
+  const [progress, setProgress] = useState(0);
+
+  // Check for reduced motion preference
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setPrefersReducedMotion(mq.matches);
+    const listener = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
+    mq.addEventListener("change", listener);
+    return () => mq.removeEventListener("change", listener);
+  }, []);
+
+  useEffect(() => {
+    setPhase(0);
+    setProgress(0);
+
+    const phaseMs = mode === "detecting" ? 800 : 1300;
+    const total = phases.length * phaseMs;
+    const tick = setInterval(() => {
+      setProgress((p) => Math.min(p + (50 / total) * 100, 96));
+    }, 50);
+    const timers = phases.map((_, i) =>
+      setTimeout(() => setPhase(i), i * phaseMs)
+    );
+    return () => {
+      clearInterval(tick);
+      timers.forEach(clearTimeout);
+    };
+  }, [mode, phases]);
+
+  return (
+    <div className="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center overflow-hidden">
+      {/* Blurred backdrop */}
+      {preview && (
+        <div className="absolute inset-0 overflow-hidden">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={preview}
+            alt=""
+            className="w-full h-full object-cover opacity-[0.04] blur-3xl scale-110"
+          />
+        </div>
+      )}
+
+      {/* Original scan line animation (fallback/complement) */
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="scan-line" />
+      </div>
+
+      <div className="relative z-10 w-full max-w-sm px-8 flex flex-col items-center gap-8">
+        {/* Spinner ring */}
+        <div className="relative w-14 h-14">
+          <div className="absolute inset-0 rounded-full border-2 border-gray-200" />
+          <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-blue-600 animate-spin" />
+        </div>
+
+        {/* Phase label */}
+        <div className="text-center">
+          <p
+            key={`${mode}-${phase}`}
+            className="text-gray-900 text-base font-semibold animate-fade-in mb-1"
+          >
+            {phases[phase]}
+          </p>
+          <p className="text-gray-400 text-xs tabular-nums">
+            Step {phase + 1} of {phases.length}
+          </p>
+        </div>
+
+        {/* Progress bar */}
+        <div className="w-full">
+          <div className="relative h-1 bg-gray-200 rounded-full overflow-hidden">
+            <div
+              className="absolute inset-y-0 left-0 bg-blue-600 rounded-full transition-all duration-200 ease-linear"
+              style={{ width: `${progress}%` }}
+            />
+          </div>
+        </div>
+
+        {/* Mode label */}
+        <p className="text-gray-400 text-xs uppercase tracking-widest">
+          {mode === "detecting" ? "Face Detection" : "Frame Analysis"}
+        </p>
+      </div>
+    </div>
+  );
+}

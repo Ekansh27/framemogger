@@ -75,6 +75,16 @@ export default function HomePage() {
     }
   }, [file, preview]);
 
+  /* ── Remove a face from detection ── */
+  const handleRemoveFace = useCallback((faceId: string) => {
+    setFaces((prev) => prev.filter((f) => f.id !== faceId));
+    setNames((prev) => {
+      const updated = { ...prev };
+      delete updated[faceId];
+      return updated;
+    });
+  }, []);
+
   /* ── Step 2→3: Names confirmed, run body scan + analysis ── */
   const handleNamesConfirmed = useCallback(async (confirmedNames: Record<string, string>) => {
     setNames(confirmedNames);
@@ -217,12 +227,12 @@ export default function HomePage() {
 
   // Loading: detecting faces
   if (step === "detecting") {
-    return <LoadingOverlay preview={preview} mode="detecting" />;
+    return <LoadingOverlay preview={preview} mode="detecting" faces={faces} />;
   }
 
   // Loading: analyzing
   if (step === "analyzing") {
-    return <LoadingOverlay preview={preview} mode="analyzing" />;
+    return <LoadingOverlay preview={preview} mode="analyzing" faces={faces} />;
   }
 
   // Face labeling modal
@@ -232,6 +242,7 @@ export default function HomePage() {
         faces={faces}
         preview={preview}
         onConfirm={handleNamesConfirmed}
+        onRemove={handleRemoveFace}
         onBack={() => {
           setStep("upload");
           setFaces([]);
@@ -292,12 +303,12 @@ export default function HomePage() {
 
             {/* Eyebrow */}
             <p className="text-zinc-400 text-xs font-medium uppercase tracking-widest">
-              Frame Analysis Tool
+              Who&apos;s ready to Mog.
             </p>
 
             {/* Headline */}
             <div className="text-center space-y-3">
-              <h1 className="text-zinc-100 animate-float animate-pulse-glow">
+              <h1 className="mog-title-shimmer animate-float animate-pulse-glow bg-gradient-to-r from-cyan-300 via-blue-200 to-violet-300 bg-clip-text text-transparent drop-shadow-[0_0_24px_rgba(59,130,246,0.65)]">
                 Mog.GPT
               </h1>
               <p className="text-zinc-300 text-base max-w-xs mx-auto leading-relaxed">
