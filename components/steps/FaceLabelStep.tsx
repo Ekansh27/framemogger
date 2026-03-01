@@ -18,9 +18,10 @@ interface FaceLabelStepProps {
   preview: string | null;
   onConfirm: (names: Record<string, string>) => void;
   onBack: () => void;
+  onRemove?: (faceId: string) => void;
 }
 
-export function FaceLabelStep({ faces, preview, onConfirm, onBack }: FaceLabelStepProps) {
+export function FaceLabelStep({ faces, preview, onConfirm, onBack, onRemove }: FaceLabelStepProps) {
   const [names, setNames] = useState<Record<string, string>>(() => {
     const init: Record<string, string> = {};
     faces.forEach((f, i) => {
@@ -242,6 +243,17 @@ export function FaceLabelStep({ faces, preview, onConfirm, onBack }: FaceLabelSt
                       )}
                     />
                   </div>
+
+                  {/* Remove button */}
+                  {onRemove && (
+                    <button
+                      onClick={() => onRemove(face.id)}
+                      className="flex-shrink-0 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all duration-200 border border-transparent hover:border-red-200"
+                      title="Remove this face from analysis"
+                    >
+                      <X size={18} />
+                    </button>
+                  )}
                 </div>
               );
             })}

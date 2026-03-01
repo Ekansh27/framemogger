@@ -7,6 +7,7 @@ import { cn, PERSON_COLORS } from "@/lib/utils";
 import { FaceStrip } from "./FaceStrip";
 import { ComparisonCard } from "./ComparisonCards";
 import { SignalBreakdown } from "./SignalBreakdown";
+import { VoiceAnnouncement } from "./VoiceAnnouncement";
 import { Navbar } from "@/components/ui/Navbar";
 
 interface PersonData {
@@ -115,6 +116,17 @@ export function ResultsView({
               </>
             )}
           </section>
+
+          {/* ── Voice Announcement ── */}
+          {winner && (
+            <section className="animate-fade-in" style={{ animationDelay: '0.5s' }}>
+              <VoiceAnnouncement 
+                winnerName={isTie ? "the tied participants" : names[winner.faceId] || "Winner"}
+                winnerScore={winner.totalScore}
+                explanation={explanation}
+              />
+            </section>
+          )}
 
           {/* ── Face strip ── */}
           <section className="card p-4">

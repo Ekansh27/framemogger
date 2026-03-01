@@ -20,6 +20,74 @@ async function loadModels(): Promise<void> {
   }
 }
 
+interface RawDetection {
+  box: { x: number; y: number; width: number; height: number };
+  score: number;
+}
+
+function iou(a: RawDetection, b: RawDetection): number {
+  const ax1 = a.box.x;
+  const ay1 = a.box.y;
+  const ax2 = a.box.x + a.box.width;
+  const ay2 = a.box.y + a.box.height;
+
+  const bx1 = b.box.x;
+  const by1 = b.box.y;
+  const bx2 = b.box.x + b.box.width;
+  const by2 = b.box.y + b.box.height;
+
+  const interX1 = Math.max(ax1, bx1);
+  const interY1 = Math.max(ay1, by1);
+  const interX2 = Math.min(ax2, bx2);
+  const interY2 = Math.min(ay2, by2);
+
+  const interW = Math.max(0, interX2 - interX1);
+  const interH = Math.max(0, interY2 - interY1);
+  const interArea = interW * interH;
+
+  const areaA = a.box.width * a.box.height;
+  const areaB = b.box.width * b.box.height;
+  const union = areaA + areaB - interArea;
+
+  return union <= 0 ? 0 : interArea / union;
+}
+
+function dedupeDetections(detections: RawDetection[]): RawDetection[] {
+  const sorted = [...detections].sort((a, b) => b.score - a.score);
+  const kept: RawDetection[] = [];
+
+  for (const candidate of sorted) {
+    const isDuplicate = kept.some((existing) => iou(existing, candidate) > 0.35);
+    if (!isDuplicate) kept.push(candidate);
+  }
+
+  return kept;
+}
+
+async function runTinyFacePass(
+  source: HTMLImageElement | HTMLCanvasElement,
+  inputSize: 320 | 416 | 512 | 608,
+  scoreThreshold: number,
+  scaleToOriginal = 1
+): Promise<RawDetection[]> {
+  const options = new faceapi.TinyFaceDetectorOptions({
+    inputSize,
+    scoreThreshold,
+  });
+
+  const detections = await faceapi.detectAllFaces(source, options);
+
+  return detections.map((d) => ({
+    box: {
+      x: d.box.x / scaleToOriginal,
+      y: d.box.y / scaleToOriginal,
+      width: d.box.width / scaleToOriginal,
+      height: d.box.height / scaleToOriginal,
+    },
+    score: d.score,
+  }));
+}
+
 function cropFace(
   canvas: HTMLCanvasElement,
   img: HTMLImageElement,
@@ -54,26 +122,42 @@ export async function detectFaces(imageSrc: string): Promise<Face[]> {
         // Load the face-api.js model
         await loadModels();
         
-        // Run face detection with very sensitive parameters
+        // Run face detection in multiple passes to improve recall
         console.log('[FaceAPI] Running face detection...');
+
+        const upscaleCanvas = document.createElement("canvas");
+        const scaleFactor = 1.5;
+        upscaleCanvas.width = Math.round(img.width * scaleFactor);
+        upscaleCanvas.height = Math.round(img.height * scaleFactor);
+        const upscaleCtx = upscaleCanvas.getContext("2d");
+        if (upscaleCtx) {
+          upscaleCtx.imageSmoothingEnabled = true;
+          upscaleCtx.imageSmoothingQuality = "high";
+          upscaleCtx.drawImage(img, 0, 0, upscaleCanvas.width, upscaleCanvas.height);
+        }
+
+        const [passA, passB, passC, passUpscaled] = await Promise.all([
+          runTinyFacePass(img, 608, 0.25),
+          runTinyFacePass(img, 512, 0.22),
+          runTinyFacePass(img, 416, 0.18),
+          runTinyFacePass(upscaleCanvas, 512, 0.15, scaleFactor),
+        ]);
+
+        const merged = dedupeDetections([...passA, ...passB, ...passC, ...passUpscaled])
+          .filter((d) => d.box.width >= 18 && d.box.height >= 18)
+          .slice(0, 12);
+
+        console.log(`[FaceAPI] Pass counts A:${passA.length} B:${passB.length} C:${passC.length} U:${passUpscaled.length}`);
+        console.log(`[FaceAPI] Merged to ${merged.length} unique faces`);
         
-        // TinyFaceDetector options - use very low threshold to catch all faces
-        const options = new faceapi.TinyFaceDetectorOptions({
-          inputSize: 512,      // Higher resolution for better detection
-          scoreThreshold: 0.3  // Very low threshold to detect all faces (default is 0.5)
-        });
-        
-        const detections = await faceapi.detectAllFaces(img, options);
-        console.log(`[FaceAPI] Detected ${detections.length} faces`);
-        
-        if (detections.length === 0) {
+        if (merged.length === 0) {
           resolve([]);
           return;
         }
         
         // Convert face-api.js detections to our Face format
         const cropCanvas = document.createElement("canvas");
-        const faces: Face[] = detections.map((detection, i) => {
+        const faces: Face[] = merged.map((detection, i) => {
           const box = detection.box;
           
           const bbox: BBox = {

@@ -281,23 +281,30 @@ export default function HomePage() {
     <>
       <Navbar />
 
-      <main className="min-h-[calc(100vh-56px)] flex flex-col">
+      <main className="min-h-[calc(100vh-56px)] flex flex-col bg-zinc-950 relative overflow-hidden">
+        <div className="pointer-events-none absolute -top-28 left-1/2 -translate-x-1/2 w-[42rem] h-[42rem] rounded-full bg-blue-600/20 blur-3xl" />
+        <div className="pointer-events-none absolute top-44 -left-24 w-[24rem] h-[24rem] rounded-full bg-violet-600/20 blur-3xl" />
+        <div className="pointer-events-none absolute bottom-10 right-0 w-[20rem] h-[20rem] rounded-full bg-cyan-500/10 blur-3xl" />
+
         {/* ── Hero ── */}
-        <section className="flex-1 flex flex-col items-center justify-center py-16 px-6">
+        <section className="relative z-10 flex-1 flex flex-col items-center justify-center py-16 px-6">
           <div className="w-full max-w-md flex flex-col items-center gap-8 animate-fade-in">
 
             {/* Eyebrow */}
-            <p className="text-gray-400 text-xs font-medium uppercase tracking-widest">
+            <p className="text-zinc-400 text-xs font-medium uppercase tracking-widest">
               Frame Analysis Tool
             </p>
 
             {/* Headline */}
             <div className="text-center space-y-3">
-              <h1 className="text-gray-900">
+              <h1 className="text-zinc-100 animate-float animate-pulse-glow">
                 Mog.GPT
               </h1>
-              <p className="text-gray-500 text-base max-w-xs mx-auto leading-relaxed">
+              <p className="text-zinc-300 text-base max-w-xs mx-auto leading-relaxed">
                 Upload a photo with 2–6 people. AI scores who commands the frame.
+              </p>
+              <p className="text-zinc-400 text-sm max-w-xs mx-auto">
+                inspired by ASU frat leader
               </p>
             </div>
 
@@ -319,7 +326,7 @@ export default function HomePage() {
                 <p className="text-red-600 text-sm">{error}</p>
                 <button
                   onClick={resetAll}
-                  className="mt-2 text-xs text-gray-500 hover:text-gray-800 transition-colors underline"
+                  className="mt-2 text-xs text-zinc-500 hover:text-zinc-200 transition-colors underline"
                 >
                   Try a different image
                 </button>
@@ -333,13 +340,13 @@ export default function HomePage() {
         </section>
 
         {/* ── Signal legend ── */}
-        <section className="border-t border-gray-200 py-8">
+        <section className="relative z-10 border-t border-zinc-800 py-8 bg-zinc-950/70">
           <div className="container">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-gray-200 rounded-xl overflow-hidden border border-gray-200">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-zinc-800 rounded-xl overflow-hidden border border-zinc-800">
               {SIGNALS.map((s) => (
-                <div key={s.label} className="bg-white px-4 py-4">
-                  <p className="text-gray-800 text-xs font-medium">{s.label}</p>
-                  <p className="text-gray-400 text-xs mt-0.5">{s.desc}</p>
+                <div key={s.label} className="bg-zinc-900 px-4 py-4">
+                  <p className="text-zinc-100 text-xs font-medium">{s.label}</p>
+                  <p className="text-zinc-400 text-xs mt-0.5">{s.desc}</p>
                 </div>
               ))}
             </div>
@@ -347,9 +354,9 @@ export default function HomePage() {
         </section>
 
         {/* ── Footer ── */}
-        <footer className="border-t border-gray-200 py-5">
+        <footer className="relative z-10 border-t border-zinc-800 py-5 bg-zinc-950">
           <div className="container">
-            <p className="text-gray-400 text-xs text-center">
+            <p className="text-zinc-500 text-xs text-center">
               Analysis covers photographic composition only — not attractiveness or personal qualities.
             </p>
           </div>

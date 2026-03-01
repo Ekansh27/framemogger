@@ -21,7 +21,9 @@
 }
 
 body {
-  background: var(--bg);
+  background:
+    radial-gradient(1200px 600px at 50% -20%, rgba(37,99,235,0.16), transparent 60%),
+    var(--bg);
   color: var(--text-primary);
   font-family: var(--font-inter), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -103,6 +105,18 @@ h4 { font-size: 0.9375rem; font-weight: 600; }
   to { opacity: 1; transform: scale(1); }
 }
 
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+  100% { transform: translateY(0px); }
+}
+
+@keyframes pulse-glow {
+  0% { text-shadow: 0 0 0 rgba(37,99,235,0); }
+  50% { text-shadow: 0 0 24px rgba(37,99,235,0.35); }
+  100% { text-shadow: 0 0 0 rgba(37,99,235,0); }
+}
+
 .animate-shimmer {
   animation: shimmer 2s infinite;
 }
@@ -113,6 +127,14 @@ h4 { font-size: 0.9375rem; font-weight: 600; }
 
 .animate-scale-in {
   animation: scale-in 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-float {
+  animation: float 3.5s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 3.5s ease-in-out infinite;
 }
 
 @layer utilities {

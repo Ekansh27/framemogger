@@ -37,10 +37,10 @@ export function DropZone({
           "relative rounded-xl border transition-all duration-150 overflow-hidden",
           !preview && "cursor-pointer",
           isDragging
-            ? "border-blue-400 bg-blue-50"
+            ? "border-blue-400 bg-blue-900/20"
             : preview
-            ? "border-gray-200 bg-white"
-            : "border-dashed border-gray-300 bg-white hover:border-gray-400 hover:bg-gray-50"
+            ? "border-zinc-700 bg-zinc-900/70"
+            : "border-dashed border-zinc-600 bg-zinc-900/60 hover:border-zinc-400 hover:bg-zinc-900"
         )}
       >
         <input
@@ -57,11 +57,11 @@ export function DropZone({
             <img
               src={preview}
               alt="Upload preview"
-              className="w-full max-h-72 object-contain bg-gray-50"
+              className="w-full max-h-72 object-contain bg-zinc-900"
             />
             <button
               onClick={(e) => { e.stopPropagation(); clear(); }}
-              className="absolute top-3 right-3 p-1.5 rounded-lg bg-white/90 border border-gray-200 text-gray-500 hover:text-gray-800 transition-colors shadow-sm"
+              className="absolute top-3 right-3 p-1.5 rounded-lg bg-zinc-900/90 border border-zinc-700 text-zinc-300 hover:text-white transition-colors shadow-sm"
               aria-label="Remove image"
             >
               <X size={14} />
@@ -69,14 +69,14 @@ export function DropZone({
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center gap-3 py-14 px-8">
-            <div className="p-3 rounded-lg bg-gray-100 border border-gray-200">
-              <Upload size={18} className="text-gray-500" />
+            <div className="p-3 rounded-lg bg-zinc-800 border border-zinc-700">
+              <Upload size={18} className="text-zinc-300" />
             </div>
             <div className="text-center">
-              <p className="text-gray-700 text-sm font-medium">
+              <p className="text-zinc-100 text-sm font-medium">
                 {isDragging ? "Drop to upload" : "Drop a photo or click to browse"}
               </p>
-              <p className="text-gray-400 text-xs mt-1">
+              <p className="text-zinc-400 text-xs mt-1">
                 2–6 people · JPEG, PNG, WebP · Max 15 MB
               </p>
             </div>
