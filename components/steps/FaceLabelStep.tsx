@@ -6,11 +6,11 @@ import type { Face } from "@/types/analysis";
 import { cn } from "@/lib/utils";
 
 const PERSON_COLORS = [
-  { border: "border-blue-400",    bg: "bg-blue-50",    text: "text-blue-700",    ring: "ring-blue-400/50",    stroke: "rgb(59, 130, 246)"  },
-  { border: "border-slate-400",   bg: "bg-slate-50",   text: "text-slate-700",   ring: "ring-slate-400/50",   stroke: "rgb(100, 116, 139)" },
-  { border: "border-emerald-400", bg: "bg-emerald-50", text: "text-emerald-700", ring: "ring-emerald-400/50", stroke: "rgb(16, 185, 129)"  },
-  { border: "border-orange-400",  bg: "bg-orange-50",  text: "text-orange-700",  ring: "ring-orange-400/50",  stroke: "rgb(245, 158, 11)"  },
-  { border: "border-indigo-400",  bg: "bg-indigo-50",  text: "text-indigo-700",  ring: "ring-indigo-400/50",  stroke: "rgb(99, 102, 241)"  },
+  { border: "border-amber-500/50", bg: "bg-amber-500/10", text: "text-amber-400", ring: "ring-amber-500/50", stroke: "rgb(245, 158, 11)" },
+  { border: "border-rose-500/50", bg: "bg-rose-500/10", text: "text-rose-400", ring: "ring-rose-500/50", stroke: "rgb(244, 63, 94)" },
+  { border: "border-orange-500/50", bg: "bg-orange-500/10", text: "text-orange-400", ring: "ring-orange-500/50", stroke: "rgb(249, 115, 22)" },
+  { border: "border-red-500/50", bg: "bg-red-500/10", text: "text-red-400", ring: "ring-red-500/50", stroke: "rgb(239, 68, 68)" },
+  { border: "border-yellow-500/50", bg: "bg-yellow-500/10", text: "text-yellow-400", ring: "ring-yellow-500/50", stroke: "rgb(234, 179, 8)" },
 ];
 
 interface FaceLabelStepProps {
@@ -55,19 +55,19 @@ export function FaceLabelStep({ faces, preview, onConfirm, onBack, onRemove }: F
 
   return (
     <div className="fixed inset-0 z-50 bg-black/30 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in overflow-y-auto">
-      <div className="w-full max-w-6xl bg-white border border-gray-200 rounded-2xl shadow-xl overflow-hidden my-8">
+      <div className="w-full max-w-6xl bg-stone-900 border border-stone-800 rounded-2xl shadow-xl overflow-hidden my-8">
         {/* Header */}
-        <div className="px-6 pt-6 pb-4 border-b border-gray-100">
+        <div className="px-6 pt-6 pb-4 border-b border-stone-800">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 rounded-lg bg-blue-50 border border-blue-100">
-              <Users size={18} className="text-blue-600" />
+            <div className="p-2 rounded-lg bg-amber-500/10 border border-amber-500/20">
+              <Users size={18} className="text-amber-500" />
             </div>
             <div className="flex-1">
-              <h3 className="text-gray-900 text-lg font-semibold">
+              <h3 className="text-stone-100 text-lg font-semibold">
                 Name each person in the photo
               </h3>
-              <p className="text-gray-500 text-sm">
-                <strong className="text-blue-600">{faces.length}</strong> {faces.length === 1 ? "person" : "people"} detected
+              <p className="text-stone-400 text-sm">
+                <strong className="text-amber-500">{faces.length}</strong> {faces.length === 1 ? "person" : "people"} detected
                 {faces.length > 1 && " — hover or tap to highlight their location"}
               </p>
             </div>
@@ -77,7 +77,7 @@ export function FaceLabelStep({ faces, preview, onConfirm, onBack, onRemove }: F
         {/* Main content area */}
         <div className="grid md:grid-cols-2 gap-6 p-6">
           {/* Image with face markers */}
-          <div className="relative bg-gray-50 rounded-xl border border-gray-200 overflow-hidden">
+          <div className="relative bg-stone-950 rounded-xl border border-stone-800 overflow-hidden">
             <div className="aspect-[4/3] relative">
               {preview && (
                 <>
@@ -93,25 +93,25 @@ export function FaceLabelStep({ faces, preview, onConfirm, onBack, onRemove }: F
                     {faces.map((face, i) => {
                       const colors = PERSON_COLORS[i % PERSON_COLORS.length];
                       const isHighlighted = hoveredId === face.id || focusedId === face.id;
-                      
+
                       // Calculate display coordinates
                       const imgElement = imageRef.current;
                       if (!imgElement) return null;
-                      
+
                       const displayWidth = imgElement.offsetWidth;
                       const displayHeight = imgElement.offsetHeight;
                       const scaleX = displayWidth / imageSize.width;
                       const scaleY = displayHeight / imageSize.height;
-                      
+
                       // Use contain logic to center the image
                       const imageAspect = imageSize.width / imageSize.height;
                       const displayAspect = displayWidth / displayHeight;
-                      
+
                       let offsetX = 0;
                       let offsetY = 0;
                       let actualScaleX = scaleX;
                       let actualScaleY = scaleY;
-                      
+
                       if (imageAspect > displayAspect) {
                         // Image is wider - fit to width
                         actualScaleY = scaleX;
@@ -121,12 +121,12 @@ export function FaceLabelStep({ faces, preview, onConfirm, onBack, onRemove }: F
                         actualScaleX = scaleY;
                         offsetX = (displayWidth - imageSize.width * actualScaleX) / 2;
                       }
-                      
+
                       const x = face.bbox.x * actualScaleX + offsetX;
                       const y = face.bbox.y * actualScaleY + offsetY;
                       const w = face.bbox.w * actualScaleX;
                       const h = face.bbox.h * actualScaleY;
-                      
+
                       return (
                         <g key={face.id}>
                           <rect
@@ -135,7 +135,7 @@ export function FaceLabelStep({ faces, preview, onConfirm, onBack, onRemove }: F
                             width={w}
                             height={h}
                             fill="none"
-                            stroke={isHighlighted ? colors.stroke : 'rgb(113, 113, 122)'}
+                            stroke={isHighlighted ? colors.stroke : 'rgb(120, 113, 108)'}
                             strokeWidth={isHighlighted ? 3 : 2}
                             strokeDasharray={isHighlighted ? "none" : "5,5"}
                             className="transition-all duration-200"
@@ -145,7 +145,7 @@ export function FaceLabelStep({ faces, preview, onConfirm, onBack, onRemove }: F
                             cx={x + w / 2}
                             cy={y - 12}
                             r={14}
-                            fill={isHighlighted ? colors.stroke : 'rgb(39, 39, 42)'}
+                            fill={isHighlighted ? colors.stroke : 'rgb(41, 37, 36)'}
                             className="transition-all duration-200"
                           />
                           <text
@@ -165,8 +165,8 @@ export function FaceLabelStep({ faces, preview, onConfirm, onBack, onRemove }: F
                 </>
               )}
             </div>
-            <div className="px-4 py-3 bg-gray-50 border-t border-gray-100">
-              <div className="flex items-center gap-2 text-xs text-gray-400">
+            <div className="px-4 py-3 bg-stone-950 border-t border-stone-800">
+              <div className="flex items-center gap-2 text-xs text-stone-500">
                 <MapPin size={12} />
                 <span>Hover over inputs to highlight faces in the photo</span>
               </div>
@@ -178,23 +178,23 @@ export function FaceLabelStep({ faces, preview, onConfirm, onBack, onRemove }: F
             {faces.map((face, i) => {
               const colors = PERSON_COLORS[i % PERSON_COLORS.length];
               const isHighlighted = hoveredId === face.id || focusedId === face.id;
-              
+
               return (
                 <div
                   key={face.id}
                   onMouseEnter={() => setHoveredId(face.id)}
                   onMouseLeave={() => setHoveredId(null)}
                   className={cn(
-                    "flex items-center gap-4 p-3 rounded-xl border-2 transition-all duration-200",
+                    "flex items-center gap-4 p-3 rounded-xl border transition-all duration-200",
                     isHighlighted
                       ? `${colors.border} ${colors.bg} shadow-sm`
-                      : "border-gray-200 bg-white hover:border-gray-300"
+                      : "border-stone-800 bg-stone-900 hover:border-stone-700"
                   )}
                 >
                   {/* Person number badge */}
                   <div className={cn(
                     "flex-shrink-0 w-10 h-10 rounded-lg flex items-center justify-center font-bold transition-all",
-                    isHighlighted ? `${colors.bg} ${colors.text} border-2 ${colors.border}` : "bg-gray-100 text-gray-500 border-2 border-gray-200"
+                    isHighlighted ? `${colors.bg} ${colors.text} border ${colors.border}` : "bg-stone-800 text-stone-400 border border-stone-700"
                   )}>
                     {i + 1}
                   </div>
@@ -202,8 +202,8 @@ export function FaceLabelStep({ faces, preview, onConfirm, onBack, onRemove }: F
                   {/* Face thumbnail */}
                   <div className="relative flex-shrink-0">
                     <div className={cn(
-                      "w-14 h-14 rounded-xl overflow-hidden border-2 shadow-md transition-all",
-                      isHighlighted ? colors.border : "border-gray-200"
+                      "w-14 h-14 rounded-xl overflow-hidden border shadow-md transition-all",
+                      isHighlighted ? colors.border : "border-stone-800"
                     )}>
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
@@ -218,7 +218,7 @@ export function FaceLabelStep({ faces, preview, onConfirm, onBack, onRemove }: F
                   <div className="flex-1 min-w-0">
                     <label className={cn(
                       "text-[10px] uppercase tracking-wider font-medium block mb-1 transition-colors",
-                      isHighlighted ? colors.text : "text-gray-500"
+                      isHighlighted ? colors.text : "text-stone-500"
                     )}>
                       Person {i + 1}
                     </label>
@@ -236,10 +236,10 @@ export function FaceLabelStep({ faces, preview, onConfirm, onBack, onRemove }: F
                       onBlur={() => setFocusedId(null)}
                       placeholder={`Enter name...`}
                       className={cn(
-                        "w-full bg-white border-2 rounded-lg px-3 py-2 text-sm text-gray-900 placeholder:text-gray-400 focus:outline-none transition-all",
+                        "w-full bg-stone-950 border rounded-lg px-3 py-2 text-sm text-stone-100 placeholder:text-stone-600 focus:outline-none transition-all",
                         isHighlighted
                           ? `${colors.border} ring-2 ${colors.ring}`
-                          : "border-gray-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20"
+                          : "border-stone-800 focus:border-amber-500 focus:ring-1 focus:ring-amber-500/20"
                       )}
                     />
                   </div>
@@ -248,7 +248,7 @@ export function FaceLabelStep({ faces, preview, onConfirm, onBack, onRemove }: F
                   {onRemove && (
                     <button
                       onClick={() => onRemove(face.id)}
-                      className="flex-shrink-0 p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all duration-200 border border-transparent hover:border-red-200"
+                      className="flex-shrink-0 p-2 text-stone-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all duration-200 border border-transparent hover:border-red-500/20"
                       title="Remove this face from analysis"
                     >
                       <X size={18} />
@@ -261,10 +261,10 @@ export function FaceLabelStep({ faces, preview, onConfirm, onBack, onRemove }: F
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-gray-100 flex items-center justify-between gap-3">
+        <div className="px-6 py-4 border-t border-stone-800 flex items-center justify-between gap-3 bg-stone-900">
           <button
             onClick={onBack}
-            className="px-4 py-2 text-sm text-gray-500 hover:text-gray-800 transition-colors"
+            className="px-4 py-2 text-sm text-stone-400 hover:text-stone-200 transition-colors"
           >
             Back
           </button>
@@ -274,8 +274,8 @@ export function FaceLabelStep({ faces, preview, onConfirm, onBack, onRemove }: F
             className={cn(
               "inline-flex items-center gap-2 px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-200",
               allNamed
-                ? "bg-blue-600 text-white hover:bg-blue-700"
-                : "bg-gray-100 text-gray-400 cursor-not-allowed"
+                ? "bg-amber-600 text-stone-50 hover:bg-amber-500"
+                : "bg-stone-800 text-stone-500 cursor-not-allowed border border-stone-700"
             )}
           >
             <Check size={16} />
@@ -307,7 +307,7 @@ export function EditNameButton({
     return (
       <button
         onClick={() => setEditing(true)}
-        className="inline-flex items-center gap-1 text-gray-400 hover:text-gray-700 transition-colors"
+        className="inline-flex items-center gap-1 text-stone-500 hover:text-stone-300 transition-colors"
         title="Edit name"
       >
         <Edit3 size={10} />
@@ -332,7 +332,7 @@ export function EditNameButton({
           onSave(value);
           setEditing(false);
         }}
-        className="w-20 bg-white border border-gray-300 rounded px-1.5 py-0.5 text-xs text-gray-900 focus:outline-none focus:border-blue-500"
+        className="w-20 bg-stone-900 border border-stone-700 rounded px-1.5 py-0.5 text-xs text-stone-100 focus:outline-none focus:border-amber-500"
       />
     </span>
   );

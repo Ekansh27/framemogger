@@ -25,6 +25,13 @@ export interface AnalysisResult {
 export interface AnalyzeRequest {
   image: string;
   mimeType: "image/jpeg" | "image/png" | "image/webp";
+  /** Names for all detected people, left-to-right */
+  names?: string[];
+  /** TensorFlow-computed scores — Gemini uses these as context for its final decision */
+  tfScores?: {
+    personA: PersonSignals & { totalScore: number };
+    personB: PersonSignals & { totalScore: number };
+  };
 }
 
 export type AnalyzeResponse =

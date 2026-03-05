@@ -49,6 +49,7 @@ const config: Config = {
         "pulse-ring": "pulse-ring 2s ease-in-out infinite",
         "count-up": "count-up 0.5s ease-out forwards",
         "slide-up": "slide-up 0.5s ease-out forwards",
+        "background-shift": "background-shift 12s ease-in-out infinite alternate",
       },
     },
   },

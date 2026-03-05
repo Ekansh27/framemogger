@@ -176,11 +176,11 @@ export function VoiceAnnouncement({ winnerName, winnerScore, explanation, analys
 
       const tokenRes = await fetch(`/api/elevenlabs/conversation-token?agentId=${encodeURIComponent(AGENT_ID)}`);
       console.log("[VoiceAgent] Token response status:", tokenRes.status);
-      
+
       if (tokenRes.ok) {
         const { conversationToken } = (await tokenRes.json()) as { conversationToken: string };
         console.log("[VoiceAgent] Got conversation token, attempting WebRTC connection...");
-        
+
         try {
           conversation = await Conversation.startSession({
             conversationToken,
@@ -249,7 +249,7 @@ export function VoiceAnnouncement({ winnerName, winnerScore, explanation, analys
       if (!conversation) {
         const signedRes = await fetch(`/api/elevenlabs/signed-url?agentId=${encodeURIComponent(AGENT_ID)}`);
         console.log("[VoiceAgent] Signed URL response status:", signedRes.status);
-        
+
         if (!signedRes.ok) {
           const details = await signedRes.text();
           throw new Error(details || "Could not get signed conversation URL");
@@ -435,18 +435,18 @@ export function VoiceAnnouncement({ winnerName, winnerScore, explanation, analys
   const canPressPrimary = status === "disconnected" || status === "connected" ? true : effectiveContextReady;
 
   return (
-    <section className="rounded-2xl border border-zinc-800/80 bg-zinc-900/70 backdrop-blur-xl shadow-[0_20px_56px_-28px_rgba(0,0,0,0.9)] p-5 sm:p-6 space-y-4">
+    <section className="rounded-2xl border border-stone-800/80 bg-stone-900/70 backdrop-blur-xl shadow-[0_20px_56px_-28px_rgba(0,0,0,0.9)] p-5 sm:p-6 space-y-4">
       <div className="flex items-center justify-between gap-3">
         <div>
-          <p className="text-zinc-400 text-xs font-medium uppercase tracking-widest">ElevenLabs · Clavicular Voice Agent</p>
+          <p className="text-stone-400 text-xs font-medium uppercase tracking-widest">ElevenLabs · Voice Analyst</p>
           <div className="mt-2 flex flex-wrap gap-2">
-            <span className={`text-[11px] px-2 py-1 rounded-full border ${status === "connected" ? "text-emerald-200 border-emerald-500/30 bg-emerald-500/10" : "text-zinc-300 border-zinc-700 bg-zinc-900/70"}`}>
+            <span className={`text-[11px] px-2 py-1 rounded-full border ${status === "connected" ? "text-amber-200 border-amber-500/30 bg-amber-500/10" : "text-stone-300 border-stone-700 bg-stone-900/70"}`}>
               {status === "connected" ? "Connected" : "Disconnected"}
             </span>
-            <span className={`text-[11px] px-2 py-1 rounded-full border ${effectiveContextReady ? "text-violet-200 border-violet-500/30 bg-violet-500/10" : "text-amber-200 border-amber-500/30 bg-amber-500/10"}`}>
+            <span className={`text-[11px] px-2 py-1 rounded-full border ${effectiveContextReady ? "text-orange-200 border-orange-500/30 bg-orange-500/10" : "text-amber-200 border-amber-500/30 bg-amber-500/10"}`}>
               {effectiveContextReady ? "Context Ready" : "Context Not Ready"}
             </span>
-            {status === "connected" && <span className="text-[11px] px-2 py-1 rounded-full border border-cyan-500/30 bg-cyan-500/10 text-cyan-200">{mode}</span>}
+            {status === "connected" && <span className="text-[11px] px-2 py-1 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-200">{mode}</span>}
           </div>
         </div>
 
@@ -454,10 +454,10 @@ export function VoiceAnnouncement({ winnerName, winnerScore, explanation, analys
           type="button"
           onClick={askExpert}
           disabled={status === "connecting" || !canPressPrimary}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 disabled:bg-violet-800 text-white text-sm font-semibold transition-colors"
+          className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 disabled:bg-stone-800 text-white text-sm font-semibold transition-colors"
         >
           {status === "connected" ? <PhoneOff size={16} /> : <Mic size={16} />}
-          {status === "connected" ? "End ElevenLabs call" : "Consult Clavicular"}
+          {status === "connected" ? "End call" : "Consult Voice Analyst"}
         </button>
       </div>
 
@@ -466,13 +466,13 @@ export function VoiceAnnouncement({ winnerName, winnerScore, explanation, analys
       )}
 
       {!error && contextMessage && (
-        <div className="flex items-center justify-between gap-2 text-xs text-zinc-200 bg-zinc-950/50 border border-zinc-800 rounded-lg px-3 py-2">
+        <div className="flex items-center justify-between gap-2 text-xs text-stone-200 bg-stone-950/50 border border-stone-800 rounded-lg px-3 py-2">
           <span>{contextMessage}</span>
           {status === "connected" && contextStatus === "failed" && (
             <button
               type="button"
               onClick={retryContextInjection}
-              className="shrink-0 px-2 py-1 rounded-md border border-violet-500/30 text-violet-200 hover:bg-violet-500/10"
+              className="shrink-0 px-2 py-1 rounded-md border border-orange-500/30 text-orange-200 hover:bg-orange-500/10"
             >
               Retry
             </button>
@@ -480,14 +480,14 @@ export function VoiceAnnouncement({ winnerName, winnerScore, explanation, analys
         </div>
       )}
 
-      <div className="rounded-lg border border-zinc-800 bg-zinc-950/60 p-3 max-h-44 overflow-y-auto space-y-2">
+      <div className="rounded-lg border border-stone-800 bg-stone-950/60 p-3 max-h-44 overflow-y-auto space-y-2">
         {transcript.length === 0 ? (
-          <p className="text-xs text-zinc-500">Press Consult Clavicular, allow microphone access, and start speaking.</p>
+          <p className="text-xs text-stone-500">Press Consult Voice Analyst, allow microphone access, and start speaking.</p>
         ) : (
           transcript.map((line, index) => (
-            <p key={`${line.role}-${index}`} className="text-sm text-zinc-300">
-              <span className={line.role === "agent" ? "text-violet-300 font-medium" : "text-cyan-300 font-medium"}>
-                {line.role === "agent" ? "Clavicular" : "You"}:
+            <p key={`${line.role}-${index}`} className="text-sm text-stone-300">
+              <span className={line.role === "agent" ? "text-amber-400 font-medium" : "text-stone-400 font-medium"}>
+                {line.role === "agent" ? "Analyst" : "You"}:
               </span>{" "}
               {line.text}
             </p>

@@ -15,16 +15,16 @@ export function Button({
   return (
     <button
       className={cn(
-        "inline-flex items-center justify-center gap-2 font-medium rounded-lg transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 focus-visible:ring-offset-zinc-950 disabled:opacity-40 disabled:pointer-events-none",
+        "inline-flex items-center justify-center gap-2 font-medium rounded-lg transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500 focus-visible:ring-offset-2 focus-visible:ring-offset-stone-950 disabled:opacity-40 disabled:pointer-events-none",
         size === "sm" && "px-3 py-1.5 text-sm",
         size === "md" && "px-4 py-2 text-sm",
         size === "lg" && "px-6 py-3 text-base",
         variant === "primary" &&
-          "bg-blue-600 text-white hover:bg-blue-500 active:bg-blue-700 shadow-lg shadow-blue-900/30",
+        "bg-amber-600 text-stone-50 hover:bg-amber-500 active:bg-amber-700 shadow-lg shadow-amber-900/30",
         variant === "secondary" &&
-          "bg-white text-gray-700 hover:bg-gray-50 border border-gray-200 hover:border-gray-300",
+        "bg-stone-50 text-stone-800 hover:bg-stone-200 border border-stone-300 hover:border-stone-400",
         variant === "ghost" &&
-          "text-gray-500 hover:text-gray-800 hover:bg-gray-100",
+        "text-stone-400 hover:text-stone-100 hover:bg-stone-800/50",
         className
       )}
       {...props}

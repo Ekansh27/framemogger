@@ -26,8 +26,8 @@ export function FaceStrip({
 
   return (
     <div className="w-full relative">
-      <div className="pointer-events-none absolute left-0 top-0 bottom-2 w-8 bg-gradient-to-r from-zinc-900/95 to-transparent z-10" />
-      <div className="pointer-events-none absolute right-0 top-0 bottom-2 w-8 bg-gradient-to-l from-zinc-900/95 to-transparent z-10" />
+      <div className="pointer-events-none absolute left-0 top-0 bottom-2 w-8 bg-gradient-to-r from-stone-900/95 to-transparent z-10" />
+      <div className="pointer-events-none absolute right-0 top-0 bottom-2 w-8 bg-gradient-to-l from-stone-900/95 to-transparent z-10" />
 
       <div
         className={cn(
@@ -47,8 +47,8 @@ export function FaceStrip({
                 "flex-shrink-0 flex flex-col items-center gap-1.5 p-2.5 rounded-2xl transition-all duration-200 border",
                 onSelect && "cursor-pointer",
                 isSelected
-                  ? "bg-blue-500/10 border-blue-500/40 shadow-[0_8px_24px_-16px_rgba(37,99,235,0.55)]"
-                  : "bg-zinc-900/80 border-zinc-700 hover:border-zinc-600 hover:-translate-y-0.5"
+                  ? "bg-amber-500/10 border-amber-500/40 shadow-[0_8px_24px_-16px_rgba(245,158,11,0.55)]"
+                  : "bg-stone-900/80 border-stone-700 hover:border-stone-600 hover:-translate-y-0.5"
               )}
               aria-label={`Select ${names[face.id] || `Person ${i + 1}`} for comparison`}
             >
@@ -58,8 +58,8 @@ export function FaceStrip({
                   className={cn(
                     "rounded-2xl overflow-hidden border-2 transition-all duration-200",
                     compact ? "w-12 h-12" : "w-[68px] h-[68px]",
-                    isSelected ? colors.border : "border-zinc-700",
-                    isSelected && "ring-4 ring-blue-500/20"
+                    isSelected ? colors.border : "border-stone-700",
+                    isSelected && "ring-4 ring-amber-500/20"
                   )}
                 >
                   {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -72,7 +72,7 @@ export function FaceStrip({
 
                 {/* Selection indicator */}
                 {isSelected && (
-                  <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-blue-600 border-2 border-zinc-900 flex items-center justify-center">
+                  <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-600 border-2 border-stone-900 flex items-center justify-center">
                     <svg
                       width="8"
                       height="8"
@@ -107,7 +107,7 @@ export function FaceStrip({
                 <span
                   className={cn(
                     "text-xs font-medium truncate",
-                    isSelected ? "text-blue-200" : "text-zinc-300"
+                    isSelected ? "text-amber-200" : "text-stone-300"
                   )}
                 >
                   {names[face.id] || `Person ${i + 1}`}

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { Face } from "@/types/analysis";
+import { BackgroundVisuals } from "../ui/BackgroundVisuals";
 
 const DETECT_PHASES = [
   "Scanning for faces…",
@@ -18,9 +19,11 @@ const ANALYZE_PHASES = [
   "Determining frame dominance…",
 ];
 
+type LoadingMode = "detecting" | "analyzing";
+
 interface LoadingOverlayProps {
   preview: string | null;
-  mode: "detecting" | "analyzing";
+  mode: LoadingMode;
   faces?: Face[];
 }
 
@@ -58,7 +61,7 @@ export function LoadingOverlay({ preview, mode, faces = [] }: LoadingOverlayProp
   }, [mode, phases]);
 
   return (
-    <div className="fixed inset-0 bg-zinc-950 z-50 flex flex-col items-center justify-center overflow-hidden">
+    <div className="fixed inset-0 bg-stone-950 z-50 flex flex-col items-center justify-center overflow-hidden">
       {/* Blurred backdrop */}
       {preview && (
         <div className="absolute inset-0 overflow-hidden">
@@ -66,15 +69,13 @@ export function LoadingOverlay({ preview, mode, faces = [] }: LoadingOverlayProp
           <img
             src={preview}
             alt=""
-            className="w-full h-full object-cover opacity-[0.12] blur-2xl scale-110"
+            className="w-full h-full object-cover opacity-20 blur-[60px] scale-110"
           />
+          <div className="absolute inset-0 bg-stone-950/70" />
         </div>
       )}
 
-      <div className="pointer-events-none absolute -top-28 left-1/2 -translate-x-1/2 w-[42rem] h-[42rem] rounded-full bg-blue-600/20 blur-3xl" />
-      <div className="pointer-events-none absolute top-44 -left-24 w-[24rem] h-[24rem] rounded-full bg-violet-600/20 blur-3xl" />
-      <div className="pointer-events-none absolute bottom-10 right-0 w-[20rem] h-[20rem] rounded-full bg-cyan-500/10 blur-3xl" />
-      <div className="pointer-events-none absolute inset-0 opacity-[0.18] [background-image:linear-gradient(rgba(255,255,255,0.04)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.04)_1px,transparent_1px)] [background-size:32px_32px]" />
+      <BackgroundVisuals />
 
       {/* Original scan line animation */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none opacity-30">
@@ -82,10 +83,10 @@ export function LoadingOverlay({ preview, mode, faces = [] }: LoadingOverlayProp
       </div>
 
       <div className="relative z-10 w-full max-w-4xl px-6 sm:px-8 flex flex-col items-center gap-8 animate-fade-in">
-        <div className="w-full rounded-2xl border border-zinc-800/80 bg-zinc-900/70 backdrop-blur-xl shadow-[0_20px_56px_-28px_rgba(0,0,0,0.9)] p-4 sm:p-6 animate-scale-in">
+        <div className="w-full rounded-2xl border border-stone-800/80 bg-stone-900/70 backdrop-blur-xl shadow-[0_20px_56px_-28px_rgba(0,0,0,0.9)] p-4 sm:p-6 animate-scale-in">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-zinc-300 text-xs font-medium uppercase tracking-widest">Detected faces</p>
-            <p className="text-zinc-500 text-xs tabular-nums">{faces.length} found</p>
+            <p className="text-stone-300 text-xs font-medium uppercase tracking-widest">Detected faces</p>
+            <p className="text-stone-500 text-xs tabular-nums">{faces.length} found</p>
           </div>
 
           {faces.length > 0 ? (
@@ -106,11 +107,11 @@ export function LoadingOverlay({ preview, mode, faces = [] }: LoadingOverlayProp
               {Array.from({ length: 4 }).map((_, index) => (
                 <div
                   key={`skeleton-${index}`}
-                  className="relative aspect-[4/5] rounded-2xl border border-zinc-800 bg-zinc-900 overflow-hidden animate-pulse"
+                  className="relative aspect-[4/5] rounded-2xl border border-stone-800 bg-stone-900 overflow-hidden animate-pulse"
                   style={{ animationDelay: `${index * 120}ms` }}
                 >
-                  <div className="absolute inset-0 bg-gradient-to-b from-zinc-800/30 via-zinc-900 to-zinc-900" />
-                  <div className="absolute inset-x-0 top-1/2 h-[2px] bg-gradient-to-r from-transparent via-cyan-300/30 to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-b from-stone-800/30 via-stone-900 to-stone-900" />
+                  <div className="absolute inset-x-0 top-1/2 h-[2px] bg-gradient-to-r from-transparent via-amber-300/30 to-transparent" />
                 </div>
               ))}
             </div>
@@ -119,35 +120,35 @@ export function LoadingOverlay({ preview, mode, faces = [] }: LoadingOverlayProp
 
         {/* Spinner ring */}
         <div className="relative w-14 h-14">
-          <div className="absolute inset-0 rounded-full border-2 border-zinc-700" />
-          <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-blue-400 animate-spin" />
+          <div className="absolute inset-0 rounded-full border-2 border-stone-700" />
+          <div className="absolute inset-0 rounded-full border-2 border-transparent border-t-amber-500 animate-spin" />
         </div>
 
         {/* Phase label */}
         <div className="text-center">
           <p
             key={`${mode}-${phase}`}
-            className="text-zinc-100 text-base font-semibold animate-fade-in mb-1"
+            className="text-stone-100 text-base font-semibold animate-fade-in mb-1"
           >
             {phases[phase]}
           </p>
-          <p className="text-zinc-400 text-xs tabular-nums">
+          <p className="text-stone-400 text-xs tabular-nums">
             Step {phase + 1} of {phases.length}
           </p>
         </div>
 
         {/* Progress bar */}
         <div className="w-full max-w-sm">
-          <div className="relative h-1 bg-zinc-800 rounded-full overflow-hidden">
+          <div className="relative h-1 bg-stone-800 rounded-full overflow-hidden">
             <div
-              className="absolute inset-y-0 left-0 bg-blue-500 rounded-full transition-all duration-200 ease-linear"
+              className="absolute inset-y-0 left-0 bg-amber-500 rounded-full transition-all duration-200 ease-linear"
               style={{ width: `${progress}%` }}
             />
           </div>
         </div>
 
         {/* Mode label */}
-        <p className="text-zinc-400 text-xs uppercase tracking-widest">
+        <p className="text-stone-400 text-xs uppercase tracking-widest">
           {mode === "detecting" ? "Face Detection" : "Frame Analysis"}
         </p>
       </div>
@@ -205,7 +206,7 @@ function FaceScanThumb({
 
   return (
     <div
-      className="relative aspect-[4/5] rounded-2xl overflow-hidden border border-zinc-700 bg-zinc-900 shadow-[0_12px_30px_-18px_rgba(0,0,0,0.85)]"
+      className="relative aspect-[4/5] rounded-2xl overflow-hidden border border-stone-700 bg-stone-900 shadow-[0_12px_30px_-18px_rgba(0,0,0,0.85)]"
       style={{ animationDelay: `${delayMs}ms` }}
     >
       {source ? (
@@ -216,19 +217,19 @@ function FaceScanThumb({
           className="w-full h-full object-cover"
         />
       ) : (
-        <div className="absolute inset-0 bg-zinc-900" />
+        <div className="absolute inset-0 bg-stone-900" />
       )}
 
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute inset-0 opacity-20 [background-image:linear-gradient(rgba(255,255,255,0.18)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.18)_1px,transparent_1px)] [background-size:16px_16px]" />
         <div
-          className="absolute inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-cyan-300/60 to-transparent transition-transform duration-200"
+          className="absolute inset-x-0 h-[2px] bg-gradient-to-r from-transparent via-amber-300/60 to-transparent transition-transform duration-200"
           style={{ transform: `translateY(${Math.max(4, Math.min(96, progress))}%)` }}
         />
-        <div className="absolute inset-0 rounded-2xl ring-1 ring-cyan-300/25 shadow-[inset_0_0_22px_rgba(56,189,248,0.2)]" />
+        <div className="absolute inset-0 rounded-2xl ring-1 ring-amber-300/25 shadow-[inset_0_0_22px_rgba(245,158,11,0.2)]" />
       </div>
 
-      <div className="absolute top-2 right-2 text-[10px] px-2 py-0.5 rounded-full bg-zinc-950/70 border border-zinc-700 text-zinc-300 tabular-nums">
+      <div className="absolute top-2 right-2 text-[10px] px-2 py-0.5 rounded-full bg-stone-950/70 border border-stone-700 text-stone-300 tabular-nums">
         {Math.round(face.confidence * 100)}%
       </div>
 

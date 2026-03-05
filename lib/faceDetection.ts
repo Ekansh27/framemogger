@@ -8,7 +8,7 @@ let modelLoaded = false;
 
 async function loadModels(): Promise<void> {
   if (modelLoaded) return;
-  
+
   try {
     console.log('[FaceAPI] Loading TinyFaceDetector model...');
     await faceapi.nets.tinyFaceDetector.loadFromUri('/models');
@@ -26,28 +26,15 @@ interface RawDetection {
 }
 
 function iou(a: RawDetection, b: RawDetection): number {
-  const ax1 = a.box.x;
-  const ay1 = a.box.y;
-  const ax2 = a.box.x + a.box.width;
-  const ay2 = a.box.y + a.box.height;
+  const ax1 = a.box.x, ay1 = a.box.y;
+  const ax2 = a.box.x + a.box.width, ay2 = a.box.y + a.box.height;
+  const bx1 = b.box.x, by1 = b.box.y;
+  const bx2 = b.box.x + b.box.width, by2 = b.box.y + b.box.height;
 
-  const bx1 = b.box.x;
-  const by1 = b.box.y;
-  const bx2 = b.box.x + b.box.width;
-  const by2 = b.box.y + b.box.height;
-
-  const interX1 = Math.max(ax1, bx1);
-  const interY1 = Math.max(ay1, by1);
-  const interX2 = Math.min(ax2, bx2);
-  const interY2 = Math.min(ay2, by2);
-
-  const interW = Math.max(0, interX2 - interX1);
-  const interH = Math.max(0, interY2 - interY1);
+  const interW = Math.max(0, Math.min(ax2, bx2) - Math.max(ax1, bx1));
+  const interH = Math.max(0, Math.min(ay2, by2) - Math.max(ay1, by1));
   const interArea = interW * interH;
-
-  const areaA = a.box.width * a.box.height;
-  const areaB = b.box.width * b.box.height;
-  const union = areaA + areaB - interArea;
+  const union = a.box.width * a.box.height + b.box.width * b.box.height - interArea;
 
   return union <= 0 ? 0 : interArea / union;
 }
@@ -55,12 +42,11 @@ function iou(a: RawDetection, b: RawDetection): number {
 function dedupeDetections(detections: RawDetection[]): RawDetection[] {
   const sorted = [...detections].sort((a, b) => b.score - a.score);
   const kept: RawDetection[] = [];
-
   for (const candidate of sorted) {
-    const isDuplicate = kept.some((existing) => iou(existing, candidate) > 0.35);
-    if (!isDuplicate) kept.push(candidate);
+    if (!kept.some((existing) => iou(existing, candidate) > 0.25)) {
+      kept.push(candidate);
+    }
   }
-
   return kept;
 }
 
@@ -68,34 +54,18 @@ async function runTinyFacePass(
   source: HTMLImageElement | HTMLCanvasElement,
   inputSize: 320 | 416 | 512 | 608,
   scoreThreshold: number,
-  scaleToOriginal = 1
 ): Promise<RawDetection[]> {
-  const options = new faceapi.TinyFaceDetectorOptions({
-    inputSize,
-    scoreThreshold,
-  });
-
+  const options = new faceapi.TinyFaceDetectorOptions({ inputSize, scoreThreshold });
   const detections = await faceapi.detectAllFaces(source, options);
-
   return detections.map((d) => ({
-    box: {
-      x: d.box.x / scaleToOriginal,
-      y: d.box.y / scaleToOriginal,
-      width: d.box.width / scaleToOriginal,
-      height: d.box.height / scaleToOriginal,
-    },
+    box: { x: d.box.x, y: d.box.y, width: d.box.width, height: d.box.height },
     score: d.score,
   }));
 }
 
-function cropFace(
-  canvas: HTMLCanvasElement,
-  img: HTMLImageElement,
-  bbox: BBox
-): string {
-  const PAD = 0.35; // 35% padding around face
-  const padX = bbox.w * PAD;
-  const padY = bbox.h * PAD;
+function cropFace(canvas: HTMLCanvasElement, img: HTMLImageElement, bbox: BBox): string {
+  const PAD = 0.35;
+  const padX = bbox.w * PAD, padY = bbox.h * PAD;
   const sx = Math.max(0, bbox.x - padX);
   const sy = Math.max(0, bbox.y - padY);
   const sw = Math.min(img.width - sx, bbox.w + padX * 2);
@@ -110,8 +80,9 @@ function cropFace(
 }
 
 /**
- * Detect faces in an image using face-api.js TinyFaceDetector
- * Uses very sensitive parameters to detect all faces including small or partially visible ones
+ * Detect faces in an image using face-api.js TinyFaceDetector.
+ * Downscales large images before detection to avoid OOM crashes on mobile.
+ * Runs passes sequentially (not parallel) to keep peak memory low.
  */
 export async function detectFaces(imageSrc: string): Promise<Face[]> {
   return new Promise((resolve) => {
@@ -119,76 +90,93 @@ export async function detectFaces(imageSrc: string): Promise<Face[]> {
     img.crossOrigin = "anonymous";
     img.onload = async () => {
       try {
-        // Load the face-api.js model
         await loadModels();
-        
-        // Run face detection in multiple passes to improve recall
-        console.log('[FaceAPI] Running face detection...');
 
-        const upscaleCanvas = document.createElement("canvas");
-        const scaleFactor = 1.5;
-        upscaleCanvas.width = Math.round(img.width * scaleFactor);
-        upscaleCanvas.height = Math.round(img.height * scaleFactor);
-        const upscaleCtx = upscaleCanvas.getContext("2d");
-        if (upscaleCtx) {
-          upscaleCtx.imageSmoothingEnabled = true;
-          upscaleCtx.imageSmoothingQuality = "high";
-          upscaleCtx.drawImage(img, 0, 0, upscaleCanvas.width, upscaleCanvas.height);
+        // Downscale to max 800px for detection — prevents OOM on 20MP phone photos.
+        // Detection accuracy is not meaningfully affected at this resolution.
+        const MAX_DETECT_PX = 800;
+        let detectSource: HTMLImageElement | HTMLCanvasElement = img;
+        let coordScale = 1; // multiply detection coords by this to get original-image coords
+
+        if (img.width > MAX_DETECT_PX || img.height > MAX_DETECT_PX) {
+          const scale = MAX_DETECT_PX / Math.max(img.width, img.height);
+          const w = Math.round(img.width * scale);
+          const h = Math.round(img.height * scale);
+          const downCanvas = document.createElement("canvas");
+          downCanvas.width = w;
+          downCanvas.height = h;
+          const ctx = downCanvas.getContext("2d")!;
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = "high";
+          ctx.drawImage(img, 0, 0, w, h);
+          detectSource = downCanvas;
+          coordScale = 1 / scale;
         }
 
-        const [passA, passB, passC, passUpscaled] = await Promise.all([
-          runTinyFacePass(img, 608, 0.25),
-          runTinyFacePass(img, 512, 0.22),
-          runTinyFacePass(img, 416, 0.18),
-          runTinyFacePass(upscaleCanvas, 512, 0.15, scaleFactor),
-        ]);
+        // Run passes sequentially to reduce peak memory (critical on mobile)
+        console.log('[FaceAPI] Running face detection (sequential passes)...');
+        const passA = await runTinyFacePass(detectSource, 608, 0.65);
+        const passB = await runTinyFacePass(detectSource, 512, 0.60);
+        const passC = await runTinyFacePass(detectSource, 416, 0.55);
 
-        const merged = dedupeDetections([...passA, ...passB, ...passC, ...passUpscaled])
-          .filter((d) => d.box.width >= 18 && d.box.height >= 18)
-          .slice(0, 12);
+        // Scale coords back to original-image space if we downscaled
+        const toOriginal = (dets: RawDetection[]): RawDetection[] =>
+          coordScale === 1
+            ? dets
+            : dets.map((d) => ({
+                ...d,
+                box: {
+                  x: d.box.x * coordScale,
+                  y: d.box.y * coordScale,
+                  width: d.box.width * coordScale,
+                  height: d.box.height * coordScale,
+                },
+              }));
 
-        console.log(`[FaceAPI] Pass counts A:${passA.length} B:${passB.length} C:${passC.length} U:${passUpscaled.length}`);
-        console.log(`[FaceAPI] Merged to ${merged.length} unique faces`);
-        
+        const merged = dedupeDetections([
+          ...toOriginal(passA),
+          ...toOriginal(passB),
+          ...toOriginal(passC),
+        ])
+          .filter((d) => {
+            const { width, height } = d.box;
+            // Minimum size: ignore tiny blobs
+            if (width < 45 || height < 45) return false;
+            // Aspect ratio: faces are roughly square (0.5–2.0).
+            // Bottles, signs, etc. are typically very tall/narrow (< 0.5).
+            const ratio = width / height;
+            if (ratio < 0.5 || ratio > 2.0) return false;
+            return true;
+          })
+          .slice(0, 6);
+
+        console.log(`[FaceAPI] Passes A:${passA.length} B:${passB.length} C:${passC.length} → ${merged.length} unique`);
+
         if (merged.length === 0) {
           resolve([]);
           return;
         }
-        
-        // Convert face-api.js detections to our Face format
+
         const cropCanvas = document.createElement("canvas");
         const faces: Face[] = merged.map((detection, i) => {
-          const box = detection.box;
-          
           const bbox: BBox = {
-            x: box.x,
-            y: box.y,
-            w: box.width,
-            h: box.height,
+            x: detection.box.x,
+            y: detection.box.y,
+            w: detection.box.width,
+            h: detection.box.height,
           };
-          
-          const cropUrl = cropFace(cropCanvas, img, bbox);
-          
           return {
             id: `face_${i}`,
             bbox,
-            cropUrl,
+            cropUrl: cropFace(cropCanvas, img, bbox),
             confidence: detection.score,
           };
         });
-        
-        // Sort faces left-to-right
+
         faces.sort((a, b) => a.bbox.x - b.bbox.x);
-        // Re-number IDs after sorting
         faces.forEach((f, i) => (f.id = `face_${i}`));
-        
-        console.log(`[detectFaces] Detected ${faces.length} faces:`, faces.map(f => ({
-          id: f.id,
-          position: `(${Math.round(f.bbox.x)}, ${Math.round(f.bbox.y)})`,
-          size: `${Math.round(f.bbox.w)}x${Math.round(f.bbox.h)}`,
-          confidence: f.confidence.toFixed(2)
-        })));
-        
+
+        console.log(`[detectFaces] Detected ${faces.length} faces`);
         resolve(faces);
       } catch (error) {
         console.error('[FaceAPI] Error detecting faces:', error);
@@ -205,42 +193,24 @@ export async function detectFaces(imageSrc: string): Promise<Face[]> {
 
 /**
  * Generate deterministic pseudo-scores from a face's bounding box.
- * Stable across refreshes for the same image.
  */
 export function generateScores(face: Face, imgWidth: number, imgHeight: number) {
-  // Simple hash from bbox
   const seed = face.bbox.x * 7 + face.bbox.y * 13 + face.bbox.w * 31 + face.bbox.h * 37;
-  const hash = (v: number) => ((Math.sin(v) * 10000) % 1 + 1) % 1; // 0-1
+  const hash = (v: number) => ((Math.sin(v) * 10000) % 1 + 1) % 1;
 
   const frameRatio = (face.bbox.w * face.bbox.h) / (imgWidth * imgHeight);
   const centerX = (face.bbox.x + face.bbox.w / 2) / imgWidth;
   const centerDist = Math.abs(centerX - 0.5);
 
-  const spatial = Math.round(
-    Math.min(95, Math.max(30, frameRatio * 400 + hash(seed + 1) * 20 + 35))
-  );
-  const posture = Math.round(
-    Math.min(95, Math.max(25, 50 + hash(seed + 2) * 30 + (1 - centerDist) * 15))
-  );
-  const facial = Math.round(
-    Math.min(95, Math.max(30, face.confidence * 60 + hash(seed + 3) * 25 + 15))
-  );
-  const attention = Math.round(
-    Math.min(95, Math.max(25, (1 - centerDist) * 50 + hash(seed + 4) * 25 + 20))
-  );
+  const spatial = Math.round(Math.min(95, Math.max(30, frameRatio * 400 + hash(seed + 1) * 20 + 35)));
+  const posture = Math.round(Math.min(95, Math.max(25, 50 + hash(seed + 2) * 30 + (1 - centerDist) * 15)));
+  const facial = Math.round(Math.min(95, Math.max(30, face.confidence * 60 + hash(seed + 3) * 25 + 15)));
+  const attention = Math.round(Math.min(95, Math.max(25, (1 - centerDist) * 50 + hash(seed + 4) * 25 + 20)));
 
-  const total =
-    Math.round(
-      (spatial * 0.3 + posture * 0.25 + facial * 0.25 + attention * 0.2) * 10
-    ) / 10;
+  const total = Math.round((spatial * 0.3 + posture * 0.25 + facial * 0.25 + attention * 0.2) * 10) / 10;
 
   return {
-    scores: {
-      spatial_presence: spatial,
-      posture_dominance: posture,
-      facial_intensity: facial,
-      attention_capture: attention,
-    },
+    scores: { spatial_presence: spatial, posture_dominance: posture, facial_intensity: facial, attention_capture: attention },
     totalScore: total,
   };
 }

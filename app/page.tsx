@@ -3,22 +3,20 @@
 import { useState, useCallback, useRef } from "react";
 import { useImageUpload } from "@/hooks/useImageUpload";
 import { DropZone } from "@/components/upload/DropZone";
-import ImageSourceToggle from "@/components/ImageSourceToggle";
 import { LoadingOverlay } from "@/components/processing/LoadingOverlay";
 import { FaceLabelStep } from "@/components/steps/FaceLabelStep";
 import { ResultsView } from "@/components/results/ResultsView";
 import { EmptyFaceState } from "@/components/results/EmptyFaceState";
 import { Navbar } from "@/components/ui/Navbar";
-import { ScanCounter } from "@/components/ui/ScanCounter";
+import { BackgroundVisuals } from "@/components/ui/BackgroundVisuals";
 import { Button } from "@/components/ui/Button";
-import { detectFaces, generateScores } from "@/lib/faceDetection";
-import { scanBodies } from "@/lib/bodyScanning";
+import { detectFaces } from "@/lib/faceDetection";
 import type { Face, Person, AppStep, AnalysisResult } from "@/types/analysis";
 
 const SIGNALS = [
   { label: "Spatial Presence", desc: "Frame area occupied" },
-  { label: "Posture",          desc: "Body orientation"   },
-  { label: "Facial Intensity", desc: "Gaze & expression"  },
+  { label: "Posture", desc: "Body orientation" },
+  { label: "Facial Intensity", desc: "Gaze & expression" },
   { label: "Attention Capture", desc: "Compositional pull" },
 ];
 
@@ -34,7 +32,6 @@ export default function HomePage() {
   const [processingTime, setProcessingTime] = useState<number | undefined>();
   const startTimeRef = useRef(0);
 
-  /* ── Reset everything ── */
   const resetAll = useCallback(() => {
     clearUpload();
     setStep("upload");
@@ -46,7 +43,6 @@ export default function HomePage() {
     setProcessingTime(undefined);
   }, [clearUpload]);
 
-  /* ── Step 1→2: Start face detection ── */
   const handleAnalyze = useCallback(async () => {
     if (!file || !preview) return;
     setError(null);
@@ -54,189 +50,91 @@ export default function HomePage() {
     startTimeRef.current = Date.now();
 
     try {
-      const detected = await detectFaces(preview);
-      setFaces(detected);
+      let detected: Face[] = [];
+      try {
+        detected = await detectFaces(preview);
+        setFaces(detected);
+      } catch {
+        // Face detection crashed (e.g. OOM on large image) — treat as 0 faces
+        detected = [];
+        setFaces([]);
+      }
 
       if (detected.length === 0) {
-        // Show empty state — step stays "detecting" briefly then moves
-        setStep("results"); // ResultsView handles 0-face case via EmptyFaceState
+        setStep("results");
         return;
       }
 
-      // Initialize default names
+      // Go to labeling so user can name people
       const defaultNames: Record<string, string> = {};
-      detected.forEach((f, i) => {
-        defaultNames[f.id] = `Person ${i + 1}`;
-      });
+      detected.forEach((f, i) => { defaultNames[f.id] = `Person ${i + 1}`; });
       setNames(defaultNames);
       setStep("labeling");
-    } catch {
-      setError("Face detection failed. Please try a different image.");
+    } catch (err) {
+      console.error("handleAnalyze crash:", err);
+      setError("Something went wrong. Please try a smaller image.");
       setStep("upload");
     }
   }, [file, preview]);
 
-  /* ── Remove a face from detection ── */
   const handleRemoveFace = useCallback((faceId: string) => {
     setFaces((prev) => prev.filter((f) => f.id !== faceId));
-    setNames((prev) => {
-      const updated = { ...prev };
-      delete updated[faceId];
-      return updated;
-    });
+    setNames((prev) => { const u = { ...prev }; delete u[faceId]; return u; });
   }, []);
 
-  /* ── Step 2→3: Names confirmed, run body scan + analysis ── */
   const handleNamesConfirmed = useCallback(async (confirmedNames: Record<string, string>) => {
     setNames(confirmedNames);
     setStep("analyzing");
 
     try {
-      // Run BodyPix body scan + image load in parallel
-      const img = new Image();
-      img.src = preview!;
-      const [bodyScanResults] = await Promise.all([
-        scanBodies(preview!).catch(() => []),
-        new Promise<void>((resolve) => {
-          if (img.complete) { resolve(); return; }
-          img.onload = () => resolve();
-        }),
-      ]);
+      // Sort faces left-to-right; send all names to Claude for scoring
+      const sortedFaceIds = [...faces].sort((a, b) => a.bbox.x - b.bbox.x).map((f) => f.id);
+      const allNames = sortedFaceIds.map((id, i) => confirmedNames[id] || `Person ${i + 1}`);
 
-      // Build person data — BodyPix body signals as primary, face bbox as fallback
-      // Both face-api and BodyPix sort left-to-right so indices align
-      const personData: Person[] = faces.map((face, i) => {
-        const body = bodyScanResults[i];
-        if (body) {
-          return {
-            faceId: face.id,
-            name: confirmedNames[face.id] || `Person ${i + 1}`,
-            scores: body.signals,
-            totalScore: body.composite_score,
-          };
-        }
-        // Fallback: bbox heuristic from face-api detection
-        const { scores, totalScore } = generateScores(face, img.width, img.height);
+      const { data: base64, mimeType } = await fileToBase64(file!);
+      const response = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ image: base64, mimeType, names: allNames }),
+      });
+      const result = await response.json();
+
+      if (!result.success) {
+        setError(result.error || "Analysis failed. Please try again.");
+        setStep("upload");
+        return;
+      }
+
+      // Map Claude's scored people back to face IDs (both are in left-to-right order)
+      const apiPeople = result.data.people as AnalysisResult["people"];
+      const personData: Person[] = sortedFaceIds.map((faceId, i) => {
+        const api = apiPeople[i];
         return {
-          faceId: face.id,
-          name: confirmedNames[face.id] || `Person ${i + 1}`,
-          scores,
-          totalScore,
+          faceId,
+          name: confirmedNames[faceId] || `Person ${i + 1}`,
+          scores: api?.signals ?? { posture_dominance: 50, spatial_presence: 50, attention_capture: 50, facial_intensity: 50 },
+          totalScore: api?.composite_score ?? 50,
         };
       });
 
       setPersons(personData);
-
-      // Claude API: get explanation text + blend signals for even better accuracy
-      let explanation = "";
-      let disclaimer = "Analysis covers photographic composition only — not attractiveness or personal qualities.";
-
-      try {
-        const base64 = await fileToBase64(file!);
-        const mimeType = file!.type as "image/jpeg" | "image/png" | "image/webp";
-        const response = await fetch("/api/analyze", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ image: base64, mimeType }),
-        });
-        const result = await response.json();
-        if (result.success) {
-          explanation = result.data.explanation || "";
-          // Replace generic "Person A" / "Person B" with the names the user entered.
-          // Faces are sorted left→right, matching Claude's Person A (left) / Person B (right).
-          const sortedFaceIds = [...faces].sort((a, b) => a.bbox.x - b.bbox.x).map((f) => f.id);
-          if (explanation && sortedFaceIds.length >= 1) {
-            const nameA = confirmedNames[sortedFaceIds[0]] || "Person A";
-            const nameB = sortedFaceIds[1] ? confirmedNames[sortedFaceIds[1]] || "Person B" : "Person B";
-            explanation = explanation
-              .replace(/\bPerson A\b/g, nameA)
-              .replace(/\bPerson B\b/g, nameB);
-          }
-          disclaimer = result.data.disclaimer || disclaimer;
-
-          // Blend: Claude knows image context, BodyPix knows actual body metrics
-          if (result.data.people && result.data.people.length >= 2) {
-            const apiPeople = result.data.people;
-            personData.forEach((p, i) => {
-              const api = apiPeople[i];
-              const body = bodyScanResults[i];
-              if (!api) return;
-              if (body) {
-                // Posture dominance: trust BodyPix more (real keypoints)
-                // Spatial/facial/attention: trust Claude more (scene context)
-                p.scores = {
-                  spatial_presence:   Math.round(api.signals.spatial_presence   * 0.6 + body.signals.spatial_presence   * 0.4),
-                  posture_dominance:  Math.round(api.signals.posture_dominance  * 0.4 + body.signals.posture_dominance  * 0.6),
-                  facial_intensity:   Math.round(api.signals.facial_intensity   * 0.6 + body.signals.facial_intensity   * 0.4),
-                  attention_capture:  Math.round(api.signals.attention_capture  * 0.5 + body.signals.attention_capture  * 0.5),
-                };
-              } else {
-                p.scores = api.signals;
-              }
-              p.totalScore = Math.round(
-                (p.scores.spatial_presence  * 0.30 +
-                 p.scores.posture_dominance * 0.25 +
-                 p.scores.facial_intensity  * 0.25 +
-                 p.scores.attention_capture * 0.20) * 10
-              ) / 10;
-            });
-            setPersons([...personData]);
-          }
-
-          setApiResult(result.data);
-        }
-      } catch {
-        console.warn("[page] API analysis failed, using body scan scores");
-      }
-
+      setApiResult(result.data);
       setProcessingTime(Date.now() - startTimeRef.current);
-
-      if (!apiResult) {
-        const sorted = [...personData].sort((a, b) => b.totalScore - a.totalScore);
-        setApiResult({
-          people: sorted.map((p, i) => ({
-            label: p.name,
-            position: "center",
-            signals: p.scores,
-            composite_score: p.totalScore,
-            rank: i + 1,
-          })),
-          winner_index: 0,
-          is_tie: sorted.length >= 2 && Math.abs(sorted[0].totalScore - sorted[1].totalScore) < 3,
-          explanation,
-          disclaimer,
-          processing_time_ms: Date.now() - startTimeRef.current,
-        });
-      }
-
       setStep("results");
     } catch {
       setError("Analysis failed. Please try again.");
       setStep("upload");
     }
-  }, [faces, preview, file, apiResult]);
+  }, [faces, file]);
 
-  /* ── Name change handler (from results screen) ── */
-  const handleNameChange = useCallback((faceId: string, name: string) => {
-    setNames((prev) => ({ ...prev, [faceId]: name }));
-    setPersons((prev) =>
-      prev.map((p) => (p.faceId === faceId ? { ...p, name } : p))
-    );
-  }, []);
-
-  /* ── Render based on current step ── */
-
-  // Loading: detecting faces
   if (step === "detecting") {
     return <LoadingOverlay preview={preview} mode="detecting" faces={faces} />;
   }
 
-  // Loading: analyzing
   if (step === "analyzing") {
     return <LoadingOverlay preview={preview} mode="analyzing" faces={faces} />;
   }
 
-  // Face labeling modal
   if (step === "labeling") {
     return (
       <FaceLabelStep
@@ -244,17 +142,12 @@ export default function HomePage() {
         preview={preview}
         onConfirm={handleNamesConfirmed}
         onRemove={handleRemoveFace}
-        onBack={() => {
-          setStep("upload");
-          setFaces([]);
-        }}
+        onBack={() => { setStep("upload"); setFaces([]); }}
       />
     );
   }
 
-  // Results
   if (step === "results") {
-    // 0 faces → empty state
     if (faces.length === 0) {
       return (
         <>
@@ -266,127 +159,108 @@ export default function HomePage() {
       );
     }
 
-    // Compute ranks from sorted persons
     const sorted = [...persons].sort((a, b) => b.totalScore - a.totalScore);
-    const rankedPersons = sorted.map((p, i) => ({
-      ...p,
-      rank: i + 1,
-    }));
+    const rankedPersons = sorted.map((p, i) => ({ ...p, rank: i + 1 }));
 
     return (
       <ResultsView
         faces={faces}
-        names={names}
         persons={rankedPersons}
         explanation={apiResult?.explanation || ""}
         disclaimer={apiResult?.disclaimer || "Analysis covers photographic composition only — not attractiveness or personal qualities."}
         processingTime={processingTime}
         originalImage={preview}
         onReset={resetAll}
-        onNameChange={handleNameChange}
       />
     );
   }
 
-  // Upload step (default)
+  // Upload step
   return (
     <>
       <Navbar />
 
-      <main className="min-h-[calc(100vh-56px)] flex flex-col bg-zinc-950 relative overflow-hidden">
-        <div className="pointer-events-none absolute -top-28 left-1/2 -translate-x-1/2 w-[42rem] h-[42rem] rounded-full bg-blue-600/20 blur-3xl" />
-        <div className="pointer-events-none absolute top-44 -left-24 w-[24rem] h-[24rem] rounded-full bg-violet-600/20 blur-3xl" />
-        <div className="pointer-events-none absolute bottom-10 right-0 w-[20rem] h-[20rem] rounded-full bg-cyan-500/10 blur-3xl" />
+      <main className="min-h-[calc(100vh-56px)] flex flex-col bg-stone-950 relative overflow-hidden">
+        <BackgroundVisuals />
 
-        {/* ── Hero ── */}
-        <section className="relative z-10 flex-1 flex flex-col items-center justify-center py-16 px-6">
-          <div className="w-full max-w-md flex flex-col items-center gap-8 animate-fade-in">
+        <section className="relative z-10 flex-1 flex flex-col items-center justify-center px-6 py-8">
+          <div className="w-full max-w-md flex flex-col items-center gap-5 animate-fade-in">
 
-            {/* Eyebrow */}
-            <p className="text-zinc-400 text-xs font-medium uppercase tracking-widest">
-              Who&apos;s ready to Mog.
-            </p>
-
-            {/* Headline */}
-            <div className="text-center space-y-3">
-              <h1 className="mog-title-shimmer animate-float animate-pulse-glow bg-gradient-to-r from-cyan-300 via-blue-200 to-violet-300 bg-clip-text text-transparent drop-shadow-[0_0_24px_rgba(59,130,246,0.65)]">
-                Mog.GPT
+            <div className="text-center space-y-2">
+              <h1 className="text-stone-50 text-3xl font-semibold tracking-tight animate-float">
+                Who Commands This Frame?
               </h1>
-              <p className="text-zinc-300 text-base max-w-xs mx-auto leading-relaxed">
+              <p className="text-stone-400 text-sm max-w-xs mx-auto leading-relaxed">
                 Upload a photo with 2–6 people. AI scores who commands the frame.
               </p>
-              <p className="text-zinc-400 text-sm max-w-xs mx-auto">
-                inspired by ASU frat leader
-              </p>
             </div>
 
-            {/* Upload area */}
+            <div className="w-full grid grid-cols-4 gap-px bg-stone-800 rounded-xl overflow-hidden border border-stone-800">
+              {SIGNALS.map((s) => (
+                <div key={s.label} className="bg-stone-900 px-3 py-2.5">
+                  <p className="text-stone-100 text-[10px] font-medium leading-tight">{s.label}</p>
+                  <p className="text-stone-500 text-[10px] mt-0.5 leading-tight">{s.desc}</p>
+                </div>
+              ))}
+            </div>
+
             <div className="w-full">
-              <ImageSourceToggle
-                uploadUI={<DropZone preview={preview} error={uploadError} clear={clearUpload} {...uploadProps} />}
-                onImageFile={uploadProps.onImageFile}
-              />
+              <DropZone preview={preview} error={uploadError} clear={clearUpload} {...uploadProps} />
             </div>
 
-            {/* Primary CTA */}
             {file && !error && (
               <Button size="lg" onClick={handleAnalyze} className="w-full">
                 Analyze Frame
               </Button>
             )}
 
-            {/* Error */}
             {error && (
-              <div className="w-full p-4 rounded-xl border border-red-200 bg-red-50 text-center animate-fade-in">
-                <p className="text-red-600 text-sm">{error}</p>
+              <div className="w-full p-4 rounded-xl border border-red-900/60 bg-red-950/30 text-center animate-fade-in">
+                <p className="text-red-400 text-sm">{error}</p>
                 <button
                   onClick={resetAll}
-                  className="mt-2 text-xs text-zinc-500 hover:text-zinc-200 transition-colors underline"
+                  className="mt-2 text-xs text-stone-400 hover:text-stone-200 transition-colors underline"
                 >
                   Try a different image
                 </button>
               </div>
             )}
 
-            {/* Scan counter */}
-            <ScanCounter />
-
-          </div>
-        </section>
-
-        {/* ── Signal legend ── */}
-        <section className="relative z-10 border-t border-zinc-800 py-8 bg-zinc-950/70">
-          <div className="container">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-zinc-800 rounded-xl overflow-hidden border border-zinc-800">
-              {SIGNALS.map((s) => (
-                <div key={s.label} className="bg-zinc-900 px-4 py-4">
-                  <p className="text-zinc-100 text-xs font-medium">{s.label}</p>
-                  <p className="text-zinc-400 text-xs mt-0.5">{s.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* ── Footer ── */}
-        <footer className="relative z-10 border-t border-zinc-800 py-5 bg-zinc-950">
-          <div className="container">
-            <p className="text-zinc-500 text-xs text-center">
-              Analysis covers photographic composition only — not attractiveness or personal qualities.
+            <p className="text-stone-600 text-[10px] text-center">
+              Composition only — not attractiveness or personal qualities.
             </p>
+
           </div>
-        </footer>
+        </section>
       </main>
     </>
   );
 }
 
-/* ── Helpers ── */
-function fileToBase64(file: File): Promise<string> {
+function fileToBase64(file: File): Promise<{ data: string; mimeType: string }> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result as string);
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      const img = new Image();
+      img.onload = () => {
+        const MAX_SIDE = 1024;
+        let w = img.width, h = img.height;
+        if (w > MAX_SIDE || h > MAX_SIDE) {
+          if (w > h) { h = Math.round(h * MAX_SIDE / w); w = MAX_SIDE; }
+          else { w = Math.round(w * MAX_SIDE / h); h = MAX_SIDE; }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext("2d")!;
+        ctx.drawImage(img, 0, 0, w, h);
+        const compressed = canvas.toDataURL("image/jpeg", 0.85);
+        resolve({ data: compressed.split(",")[1], mimeType: "image/jpeg" });
+      };
+      img.onerror = reject;
+      img.src = dataUrl;
+    };
     reader.onerror = reject;
   });
 }

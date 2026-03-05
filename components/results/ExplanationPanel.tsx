@@ -26,9 +26,9 @@ export function ExplanationPanel({ result, explanation, disclaimer }: Explanatio
   );
 
   return (
-    <div className="rounded-2xl border border-zinc-800/80 bg-zinc-900/70 backdrop-blur-xl shadow-[0_20px_56px_-28px_rgba(0,0,0,0.9)] p-6 sm:p-7 space-y-6">
+    <div className="rounded-2xl border border-stone-800/80 bg-stone-900/70 backdrop-blur-xl shadow-[0_20px_56px_-28px_rgba(0,0,0,0.9)] p-6 sm:p-7 space-y-6">
       <div>
-        <p className="text-zinc-400 text-xs font-medium uppercase tracking-widest mb-3">
+        <p className="text-stone-400 text-xs font-medium uppercase tracking-widest mb-3">
           Analysis
         </p>
 
@@ -36,8 +36,8 @@ export function ExplanationPanel({ result, explanation, disclaimer }: Explanatio
           <div
             className={
               expanded
-                ? "space-y-3 text-zinc-200 text-sm sm:text-[15px] leading-7"
-                : "space-y-3 text-zinc-200 text-sm sm:text-[15px] leading-7 max-h-[8.5rem] overflow-hidden"
+                ? "space-y-3 text-stone-200 text-sm sm:text-[15px] leading-7"
+                : "space-y-3 text-stone-200 text-sm sm:text-[15px] leading-7 max-h-[8.5rem] overflow-hidden"
             }
             style={!expanded && isLong ? { maskImage: "linear-gradient(to bottom, black 70%, transparent 100%)" } : undefined}
           >
@@ -48,21 +48,21 @@ export function ExplanationPanel({ result, explanation, disclaimer }: Explanatio
             ))}
           </div>
         ) : (
-          <p className="text-zinc-400 text-sm">No detailed explanation available.</p>
+          <p className="text-stone-400 text-sm">No detailed explanation available.</p>
         )}
 
         {isLong && (
           <button
             onClick={() => setExpanded((v) => !v)}
-            className="mt-3 text-xs font-medium text-blue-300 hover:text-blue-200 underline underline-offset-2"
+            className="mt-3 text-xs font-medium text-amber-400 hover:text-amber-300 underline underline-offset-2"
           >
             {expanded ? "Show less" : "Show more"}
           </button>
         )}
       </div>
 
-      <div className="border border-zinc-700 rounded-xl bg-zinc-950/70 px-3.5 py-3">
-        <p className="text-zinc-400 text-xs leading-relaxed">{resolvedDisclaimer}</p>
+      <div className="border border-stone-700 rounded-xl bg-stone-950/70 px-3.5 py-3">
+        <p className="text-stone-400 text-xs leading-relaxed">{resolvedDisclaimer}</p>
       </div>
     </div>
   );

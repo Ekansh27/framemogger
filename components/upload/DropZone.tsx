@@ -37,10 +37,10 @@ export function DropZone({
           "relative rounded-xl border transition-all duration-150 overflow-hidden",
           !preview && "cursor-pointer",
           isDragging
-            ? "border-blue-400 bg-blue-900/20"
+            ? "border-amber-400 bg-amber-900/20"
             : preview
-            ? "border-zinc-700 bg-zinc-900/70"
-            : "border-dashed border-zinc-600 bg-zinc-900/60 hover:border-zinc-400 hover:bg-zinc-900"
+              ? "border-stone-700 bg-stone-900/70"
+              : "border-dashed border-stone-600 bg-stone-900/60 hover:border-amber-500/50 hover:bg-stone-900/80"
         )}
       >
         <input
@@ -57,11 +57,11 @@ export function DropZone({
             <img
               src={preview}
               alt="Upload preview"
-              className="w-full max-h-72 object-contain bg-zinc-900"
+              className="w-full max-h-72 object-contain bg-stone-950"
             />
             <button
               onClick={(e) => { e.stopPropagation(); clear(); }}
-              className="absolute top-3 right-3 p-1.5 rounded-lg bg-zinc-900/90 border border-zinc-700 text-zinc-300 hover:text-white transition-colors shadow-sm"
+              className="absolute top-3 right-3 p-1.5 rounded-lg bg-stone-900/90 border border-stone-700 text-stone-300 hover:text-stone-50 transition-colors shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
               aria-label="Remove image"
             >
               <X size={14} />
@@ -69,15 +69,15 @@ export function DropZone({
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center gap-3 py-14 px-8">
-            <div className="p-3 rounded-lg bg-zinc-800 border border-zinc-700">
-              <Upload size={18} className="text-zinc-300" />
+            <div className="p-3 rounded-lg bg-stone-800 border border-stone-700 shadow-sm">
+              <Upload size={18} className="text-amber-500/80" />
             </div>
             <div className="text-center">
-              <p className="text-zinc-100 text-sm font-medium">
+              <p className="text-stone-100 text-sm font-medium">
                 {isDragging ? "Drop to upload" : "Drop a photo or click to browse"}
               </p>
-              <p className="text-zinc-400 text-xs mt-1">
-                2–6 people · JPEG, PNG, WebP · Max 15 MB
+              <p className="text-stone-400 text-xs mt-1">
+                2–6 people · JPEG, PNG, WebP · Max 10 MB
               </p>
             </div>
           </div>
